@@ -1,0 +1,269 @@
+{
+  "info": {
+    "name": "GetDone Backend API",
+    "description": "Postman collection for GetDone backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{supabase_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://your-project-ref.supabase.co/functions/v1",
+      "type": "string"
+    },
+    {
+      "key": "supabase_token",
+      "value": "your-jwt-token-here",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "offer_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Switch Role",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/role/switch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "role", "switch"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "List Offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/offers?trade=plumbing",
+              "host": ["{{base_url}}"],
+              "path": ["api", "offers"],
+              "query": [
+                {
+                  "key": "trade",
+                  "value": "plumbing"
+                },
+                {
+                  "key": "lat",
+                  "value": "40.7128",
+                  "disabled": true
+                },
+                {
+                  "key": "lng",
+                  "value": "-74.0060",
+                  "disabled": true
+                },
+                {
+                  "key": "max_distance",
+                  "value": "50",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offer_id\": \"{{offer_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pro/offers/accept",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pro", "offers", "accept"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Verification",
+      "item": [
+        {
+          "name": "Start Identity Verification",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stripe/identity/start",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stripe", "identity", "start"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Presign Document Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"plumbing_license\",\n  \"doc_subtype\": \"master\",\n  \"file_name\": \"license.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pro-docs/presign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pro-docs", "presign"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_url\": \"https://storage.example.com/pro-docs/user-id/plumbing_license/master/uuid.pdf\",\n  \"doc_type\": \"plumbing_license\",\n  \"doc_subtype\": \"master\",\n  \"number\": \"PL-12345\",\n  \"issuer\": \"State Plumbing Board\",\n  \"issued_at\": \"2024-01-01\",\n  \"expires_at\": \"2026-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pro-docs/submit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pro-docs", "submit"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Start Payments Setup",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/payments/start",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "start"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Stripe Identity Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "stripe-signature",
+                "value": "{{stripe_signature}}",
+                "description": "Stripe webhook signature"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_webhook\",\n  \"type\": \"identity.verification_session.verified\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"vs_test_123\",\n      \"status\": \"verified\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/stripe/identity/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stripe", "identity", "webhook"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stripe Payments Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "stripe-signature",
+                "value": "{{stripe_signature}}",
+                "description": "Stripe webhook signature"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_webhook\",\n  \"type\": \"account.updated\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"acct_test_123\",\n      \"payouts_enabled\": true,\n      \"details_submitted\": true\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/stripe/payments/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stripe", "payments", "webhook"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

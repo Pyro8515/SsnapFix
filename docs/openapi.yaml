@@ -1,0 +1,492 @@
+openapi: 3.0.3
+info:
+  title: GetDone Backend API
+  description: Backend API for GetDone platform - professional services marketplace
+  version: 1.0.0
+  contact:
+    name: GetDone API Support
+
+servers:
+  - url: https://{project-ref}.supabase.co/functions/v1
+    description: Supabase Edge Functions
+    variables:
+      project-ref:
+        default: your-project-ref
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/me:
+    get:
+      summary: Get current user information
+      description: Returns account info, documents, trade compliance, and verification status
+      operationId: getMe
+      tags:
+        - User
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/role/switch:
+    post:
+      summary: Switch user role
+      description: Toggles between customer and professional role (if allowed)
+      operationId: switchRole
+      tags:
+        - User
+      responses:
+        '200':
+          description: Role switched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleSwitchResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/offers:
+    get:
+      summary: List available offers/jobs
+      description: Returns offers the user is eligible for (filtered by trade compliance for professionals)
+      operationId: listOffers
+      tags:
+        - Offers
+      parameters:
+        - name: trade
+          in: query
+          schema:
+            type: string
+          description: Filter by trade type
+        - name: lat
+          in: query
+          schema:
+            type: number
+          description: Latitude for distance filtering
+        - name: lng
+          in: query
+          schema:
+            type: number
+          description: Longitude for distance filtering
+        - name: max_distance
+          in: query
+          schema:
+            type: number
+            default: 50
+          description: Maximum distance in km
+      responses:
+        '200':
+          description: List of offers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Offer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/pro/offers/accept:
+    post:
+      summary: Accept an offer/job
+      description: Accepts an offer with compliance checking. Returns 409 if compliance issues exist.
+      operationId: acceptOffer
+      tags:
+        - Offers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - offer_id
+              properties:
+                offer_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Offer accepted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  offer_id:
+                    type: string
+                    format: uuid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Compliance issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/stripe/identity/start:
+    post:
+      summary: Start Stripe Identity verification
+      description: Creates a Stripe Identity verification session for the current user
+      operationId: startIdentityVerification
+      tags:
+        - Verification
+      responses:
+        '200':
+          description: Verification session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verification_session_id:
+                    type: string
+                  client_secret:
+                    type: string
+                  url:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stripe/identity/webhook:
+    post:
+      summary: Stripe Identity webhook handler
+      description: Processes Stripe Identity webhook events (idempotent)
+      operationId: identityWebhook
+      tags:
+        - Webhooks
+      security: []
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+
+  /api/pro-docs/presign:
+    post:
+      summary: Generate presigned URL for document upload
+      description: Creates a presigned URL for uploading a document to storage
+      operationId: presignDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - doc_type
+                - file_name
+              properties:
+                doc_type:
+                  type: string
+                doc_subtype:
+                  type: string
+                file_name:
+                  type: string
+      responses:
+        '200':
+          description: Presigned URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/pro-docs/submit:
+    post:
+      summary: Submit document metadata
+      description: Saves document metadata after upload and triggers compliance recomputation
+      operationId: submitDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - file_url
+                - doc_type
+              properties:
+                file_url:
+                  type: string
+                doc_type:
+                  type: string
+                doc_subtype:
+                  type: string
+                number:
+                  type: string
+                issuer:
+                  type: string
+                issued_at:
+                  type: string
+                  format: date
+                expires_at:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Document submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/payments/start:
+    post:
+      summary: Start Stripe Connect onboarding
+      description: Creates or retrieves Stripe Connect account link for payouts setup
+      operationId: startPayments
+      tags:
+        - Payments
+      responses:
+        '200':
+          description: Account link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  expires_at:
+                    type: integer
+                  account_id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stripe/payments/webhook:
+    post:
+      summary: Stripe Payments webhook handler
+      description: Processes Stripe Connect webhook events (idempotent)
+      operationId: paymentsWebhook
+      tags:
+        - Webhooks
+      security: []
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_type:
+          type: string
+          enum: [customer, professional]
+        active_role:
+          type: string
+        can_switch_roles:
+          type: boolean
+        verification_status:
+          type: string
+          enum: [pending, approved, rejected]
+        avatar_url:
+          type: string
+          nullable: true
+        professional_profile:
+          type: object
+          nullable: true
+          properties:
+            services:
+              type: array
+              items:
+                type: string
+            identity_status:
+              type: string
+            payouts_enabled:
+              type: boolean
+            payouts_status:
+              type: string
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentStatus'
+        trade_compliance:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeCompliance'
+
+    DocumentStatus:
+      type: object
+      properties:
+        doc_type:
+          type: string
+        doc_subtype:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired, manual_review]
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    TradeCompliance:
+      type: object
+      properties:
+        trade:
+          type: string
+        compliant:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+
+    RoleSwitchResponse:
+      type: object
+      properties:
+        active_role:
+          type: string
+
+    Offer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        trade:
+          type: array
+          items:
+            type: string
+        location_lat:
+          type: number
+          nullable: true
+        location_lng:
+          type: number
+          nullable: true
+        customer_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [open, assigned, completed, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PresignResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+        upload_url:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Conflict (business rule violation)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
