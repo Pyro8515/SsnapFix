@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/routes.dart';
+import '../../../shared/extensions/string_extensions.dart';
 import '../../../shared/state/account_controller.dart';
 import '../../../shared/widgets/role_toggle.dart';
 import '../../../shared/widgets/verification_banner.dart';

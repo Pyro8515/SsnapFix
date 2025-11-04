@@ -38,3 +38,16 @@ extension RoleParser on String {
     }
   }
 }
+
+extension VerificationStatusLabel on VerificationStatus {
+  String get label {
+    switch (this) {
+      case VerificationStatus.pending:
+        return 'Pending';
+      case VerificationStatus.approved:
+        return 'Approved';
+      case VerificationStatus.rejected:
+        return 'Rejected';
+    }
+  }
+}
