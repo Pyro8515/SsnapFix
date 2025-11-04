@@ -21,28 +21,31 @@ supabase db reset  # Resets and applies all migrations
 supabase migration up
 ```
 
-Migrations:
-1. `001_initial_schema.sql` - Core tables and schema
-2. `002_rls_policies.sql` - Row Level Security policies
-3. `003_functions_and_views.sql` - SQL functions and views
+Migrations (run in order):
+1. `001_initial_schema.sql` - Core tables and schema (idempotent)
+2. `002_rls_policies.sql` - Row Level Security policies (idempotent)
+3. `003_functions_and_views.sql` - SQL functions and views (idempotent)
 4. `004_storage_policies.sql` - Storage bucket policies (placeholder)
 5. `005_seed_data.sql` - Seed data for development
+6. `006_storage_buckets.sql` - Storage buckets and policies (idempotent)
+7. `007_fix_storage_path_helper.sql` - Storage path helper function
+8. `008_fix_presign_upload_url.sql` - Storage path documentation
+9. `009_pro_documents_audits.sql` - Document audit table and triggers (idempotent)
+10. `010_rls_audit_table.sql` - RLS policies for audit table (idempotent)
+
+**All migrations are idempotent** - safe to run multiple times.
 
 ### 2. Storage Buckets
 
-Create storage buckets via Supabase Dashboard or CLI:
+Storage buckets and policies are created automatically by migration `006_storage_buckets.sql`:
 
-```sql
--- Create buckets (run in Supabase SQL editor)
-INSERT INTO storage.buckets (id, name, public)
-VALUES 
-  ('pro-avatars', 'pro-avatars', true),
-  ('pro-docs', 'pro-docs', false);
-```
-
-Storage policies should be set via Supabase Dashboard:
-- **pro-avatars**: Public read, authenticated users can upload to their own path
-- **pro-docs**: Private, only users can access their own documents, admins can view all
+- **pro-avatars** (public): Public read, authenticated users can upload to their own path
+  - Path structure: `pro-avatars/{auth.uid()}/{filename}`
+  - Policies: Public read, authenticated write to own path
+  
+- **pro-docs** (private): Private, only users can access their own documents, admins can view all
+  - Path structure: `pro-docs/{auth.uid()}/{doc_type}/{doc_subtype|default}/{uuid}.{extension}`
+  - Policies: User-only access, admin read-all
 
 ### 3. Environment Variables
 
@@ -118,8 +121,77 @@ See `docs/postman.json` for Postman collection with example requests.
 
 ## Seed Data
 
-Run `005_seed_data.sql` to create:
-- Trade requirements for common trades
+Run `supabase/seed.sql` to create:
+- Trade requirements for common trades (plumbing, HVAC, electrical, painting, locksmith)
+- Sample offers (7 sample jobs)
 - Helper function `seed_test_users()` for creating test users
 
-Note: Test users require corresponding `auth.users` entries first.
+**Usage:**
+```sql
+-- Run seed file
+\i supabase/seed.sql
+
+-- Or create test users manually:
+-- 1. Create auth.users entries first (via Supabase Auth API or Dashboard):
+--    - hvac_pro@example.com
+--    - plumbing_pro@example.com
+-- 2. Run: SELECT * FROM seed_test_users();
+```
+
+**Seed Data Includes:**
+- One **approved professional** (HVAC + Painting) with complete documents
+- One **pending professional** (Plumbing) with missing required documents
+- Trade requirements for all supported trades
+- Sample offers for testing
+
+Note: The `seed_test_users()` function requires corresponding `auth.users` entries first.
+
+## Row Level Security (RLS)
+
+All tables have RLS enabled with comprehensive policies:
+
+- **User Isolation**: Users can only access their own data
+- **Admin Bypass**: Admins have elevated access to view and manage all data
+- **Path-Based Storage**: Storage access is controlled by path ownership (`auth.uid()` in path)
+- **Audit Trail**: All document changes are automatically audited
+
+See `RLS_POLICIES.md` for comprehensive RLS documentation including:
+- All table policies
+- Storage bucket policies
+- Security considerations
+- Testing guidelines
+
+## Database Schema
+
+### Core Tables
+
+- **users**: App-level user records (account_type, active_role, can_switch_roles, verification_status, avatar_url)
+- **professional_profiles**: Professional-specific data (identity_ref_id, services[], payouts_status)
+- **pro_documents**: Document uploads and verification status
+- **pro_documents_audits**: Audit trail for all document changes (automatic)
+- **pro_trade_compliance**: Trade compliance tracking (computed)
+- **trade_requirements**: Global and trade-specific document requirements
+- **admin_users**: Admin access control
+- **webhook_events**: Webhook idempotency and audit
+- **offers**: Job listings/offers
+- **offer_assignments**: Job assignments (pros assigned to offers)
+
+### Functions
+
+- `recompute_pro_trade_compliance(user_id)`: Recomputes trade compliance for a user
+- `expire_pro_documents()`: Marks expired documents and triggers compliance recomputation
+- `seed_test_users()`: Creates test users (requires auth.users entries)
+
+### Views
+
+- `v_user_active_docs`: Latest active/approved documents per user
+
+## Idempotency
+
+**All migrations are idempotent** - safe to run multiple times:
+- Tables use `CREATE TABLE IF NOT EXISTS`
+- Policies use `DROP POLICY IF EXISTS` before `CREATE POLICY`
+- Functions use `CREATE OR REPLACE FUNCTION`
+- Triggers use `DROP TRIGGER IF EXISTS` before `CREATE TRIGGER`
+- Indexes use `CREATE INDEX IF NOT EXISTS`
+- Views use `CREATE OR REPLACE VIEW`

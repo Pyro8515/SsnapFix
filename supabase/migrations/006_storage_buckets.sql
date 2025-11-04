@@ -14,11 +14,13 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for pro-avatars
 -- Policy: Anyone can read public avatars
+DROP POLICY IF EXISTS "Public avatars are viewable by everyone" ON storage.objects;
 CREATE POLICY "Public avatars are viewable by everyone"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'pro-avatars');
 
 -- Policy: Authenticated users can upload to their own path
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
 CREATE POLICY "Users can upload their own avatar"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -28,6 +30,7 @@ WITH CHECK (
 );
 
 -- Policy: Users can update their own avatar
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE
 USING (
@@ -37,6 +40,7 @@ USING (
 );
 
 -- Policy: Users can delete their own avatar
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE
 USING (
@@ -47,6 +51,7 @@ USING (
 
 -- Storage policies for pro-docs
 -- Policy: Users can read their own documents
+DROP POLICY IF EXISTS "Users can view their own documents" ON storage.objects;
 CREATE POLICY "Users can view their own documents"
 ON storage.objects FOR SELECT
 USING (
@@ -56,6 +61,7 @@ USING (
 );
 
 -- Policy: Users can upload their own documents
+DROP POLICY IF EXISTS "Users can upload their own documents" ON storage.objects;
 CREATE POLICY "Users can upload their own documents"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -65,6 +71,7 @@ WITH CHECK (
 );
 
 -- Policy: Users can update their own documents
+DROP POLICY IF EXISTS "Users can update their own documents" ON storage.objects;
 CREATE POLICY "Users can update their own documents"
 ON storage.objects FOR UPDATE
 USING (
@@ -74,6 +81,7 @@ USING (
 );
 
 -- Policy: Admins can view all documents
+DROP POLICY IF EXISTS "Admins can view all documents" ON storage.objects;
 CREATE POLICY "Admins can view all documents"
 ON storage.objects FOR SELECT
 USING (

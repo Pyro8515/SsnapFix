@@ -123,19 +123,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  offer_id:
-                    type: string
-                    format: uuid
+                $ref: '#/components/schemas/OfferAcceptResponse'
+        '400':
+          description: Bad request (missing offer_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Compliance issues
+          description: Compliance issues or offer already assigned
           content:
             application/json:
               schema:
@@ -154,14 +160,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  verification_session_id:
-                    type: string
-                  client_secret:
-                    type: string
-                  url:
-                    type: string
+                $ref: '#/components/schemas/IdentityStartResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -175,6 +174,12 @@ paths:
       tags:
         - Webhooks
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeWebhookEvent'
       responses:
         '200':
           description: Webhook processed
@@ -185,6 +190,21 @@ paths:
                 properties:
                   received:
                     type: boolean
+                  message:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad request (missing signature or invalid payload)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/pro-docs/presign:
     post:
@@ -216,6 +236,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PresignResponse'
+        '400':
+          description: Bad request (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -260,15 +286,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  status:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/DocumentSubmitResponse'
+        '400':
+          description: Bad request (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -287,18 +311,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-                  expires_at:
-                    type: integer
-                  account_id:
-                    type: string
+                $ref: '#/components/schemas/PaymentsStartResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/stripe/payments/webhook:
     post:
@@ -308,6 +327,12 @@ paths:
       tags:
         - Webhooks
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeWebhookEvent'
       responses:
         '200':
           description: Webhook processed
@@ -318,6 +343,34 @@ paths:
                 properties:
                   received:
                     type: boolean
+                  message:
+                    type: string
+                    nullable: true
+        '400':
+          description: Bad request (missing signature or invalid payload)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/background/start:
+    post:
+      summary: Start background check process (Optional)
+      description: Initiates background check verification for professional users
+      operationId: startBackgroundCheck
+      tags:
+        - Verification
+      responses:
+        '200':
+          description: Background check initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundStartResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
 components:
   securitySchemes:
@@ -445,22 +498,135 @@ components:
       properties:
         url:
           type: string
+          description: Presigned URL for upload
+        path:
+          type: string
+          description: Storage path where file will be uploaded
         fields:
           type: object
+          description: Additional fields for upload (S3-style, empty for Supabase)
           additionalProperties:
             type: string
-        upload_url:
+
+    DocumentSubmitResponse:
+      type: object
+      properties:
+        id:
           type: string
+          format: uuid
+          description: Document ID
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired, manual_review]
+          description: Document verification status
+        message:
+          type: string
+          description: Success message
+
+    IdentityStartResponse:
+      type: object
+      properties:
+        verification_session_id:
+          type: string
+          description: Stripe Identity verification session ID
+        client_secret:
+          type: string
+          description: Client secret for frontend SDK
+        url:
+          type: string
+          format: uri
+          description: URL to redirect user for verification
+
+    PaymentsStartResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Account link URL for Stripe Connect onboarding
+        expires_at:
+          type: integer
+          format: int64
+          description: Unix timestamp when link expires
+        account_id:
+          type: string
+          description: Stripe Connect account ID
+
+    OfferAcceptResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether offer was accepted
+        offer_id:
+          type: string
+          format: uuid
+          description: ID of accepted offer
+
+    BackgroundStartResponse:
+      type: object
+      properties:
+        background_check_id:
+          type: string
+          description: Background check verification ID
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+          description: Initial status of background check
+        message:
+          type: string
+          description: Status message
+
+    StripeWebhookEvent:
+      type: object
+      description: Stripe webhook event payload structure
+      properties:
+        id:
+          type: string
+          description: Event ID (used for idempotency)
+        type:
+          type: string
+          description: Event type (e.g., identity.verification_session.verified, account.updated)
+          enum:
+            - identity.verification_session.verified
+            - identity.verification_session.requires_input
+            - identity.verification_session.processing
+            - identity.verification_session.canceled
+            - account.updated
+            - account.application.deauthorized
+        data:
+          type: object
+          description: Event data object
+          properties:
+            object:
+              type: object
+              description: The Stripe object related to the event
+              additionalProperties: true
+        created:
+          type: integer
+          format: int64
+          description: Unix timestamp of event creation
+        livemode:
+          type: boolean
+          description: Whether event is from live or test mode
 
     ErrorResponse:
       type: object
       properties:
         error:
           type: string
+          description: Error message
         reasons:
           type: array
           items:
             type: string
+          description: Array of specific reasons for the error (used in 409 responses)
+          nullable: true
+        details:
+          type: object
+          description: Additional error details
+          nullable: true
+          additionalProperties: true
 
   responses:
     Unauthorized:

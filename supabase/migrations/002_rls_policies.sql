@@ -25,80 +25,98 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Users policies
+DROP POLICY IF EXISTS "Users can view their own record" ON users;
 CREATE POLICY "Users can view their own record"
     ON users FOR SELECT
     USING (auth_user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update their own record" ON users;
 CREATE POLICY "Users can update their own record"
     ON users FOR UPDATE
     USING (auth_user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can view all users" ON users;
 CREATE POLICY "Admins can view all users"
     ON users FOR SELECT
     USING (is_admin(auth_user_id()));
 
 -- Professional profiles policies
+DROP POLICY IF EXISTS "Users can view their own profile" ON professional_profiles;
 CREATE POLICY "Users can view their own profile"
     ON professional_profiles FOR SELECT
     USING (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON professional_profiles;
 CREATE POLICY "Users can update their own profile"
     ON professional_profiles FOR UPDATE
     USING (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON professional_profiles;
 CREATE POLICY "Users can insert their own profile"
     ON professional_profiles FOR INSERT
     WITH CHECK (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Admins can view all profiles" ON professional_profiles;
 CREATE POLICY "Admins can view all profiles"
     ON professional_profiles FOR SELECT
     USING (is_admin(auth_user_id()));
 
 -- Pro documents policies
+DROP POLICY IF EXISTS "Users can view their own documents" ON pro_documents;
 CREATE POLICY "Users can view their own documents"
     ON pro_documents FOR SELECT
     USING (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Users can insert their own documents" ON pro_documents;
 CREATE POLICY "Users can insert their own documents"
     ON pro_documents FOR INSERT
     WITH CHECK (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Users can update their own documents" ON pro_documents;
 CREATE POLICY "Users can update their own documents"
     ON pro_documents FOR UPDATE
     USING (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Admins can view all documents" ON pro_documents;
 CREATE POLICY "Admins can view all documents"
     ON pro_documents FOR SELECT
     USING (is_admin(auth_user_id()));
 
+DROP POLICY IF EXISTS "Admins can update all documents" ON pro_documents;
 CREATE POLICY "Admins can update all documents"
     ON pro_documents FOR UPDATE
     USING (is_admin(auth_user_id()));
 
 -- Trade compliance policies
+DROP POLICY IF EXISTS "Users can view their own compliance" ON pro_trade_compliance;
 CREATE POLICY "Users can view their own compliance"
     ON pro_trade_compliance FOR SELECT
     USING (user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Admins can view all compliance" ON pro_trade_compliance;
 CREATE POLICY "Admins can view all compliance"
     ON pro_trade_compliance FOR SELECT
     USING (is_admin(auth_user_id()));
 
 -- Admin users policies (only admins can view)
+DROP POLICY IF EXISTS "Admins can view admin list" ON admin_users;
 CREATE POLICY "Admins can view admin list"
     ON admin_users FOR SELECT
     USING (is_admin(auth_user_id()));
 
 -- Webhook events (admin only)
+DROP POLICY IF EXISTS "Admins can view webhook events" ON webhook_events;
 CREATE POLICY "Admins can view webhook events"
     ON webhook_events FOR SELECT
     USING (is_admin(auth_user_id()));
 
 -- Offers policies (public read for authenticated users, write for customers/admins)
+DROP POLICY IF EXISTS "Authenticated users can view offers" ON offers;
 CREATE POLICY "Authenticated users can view offers"
     ON offers FOR SELECT
     USING (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Customers can create offers" ON offers;
 CREATE POLICY "Customers can create offers"
     ON offers FOR INSERT
     WITH CHECK (
@@ -106,15 +124,18 @@ CREATE POLICY "Customers can create offers"
         (customer_user_id = auth_user_id() OR customer_user_id IS NULL)
     );
 
+DROP POLICY IF EXISTS "Offer owners can update their offers" ON offers;
 CREATE POLICY "Offer owners can update their offers"
     ON offers FOR UPDATE
     USING (customer_user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Admins can manage all offers" ON offers;
 CREATE POLICY "Admins can manage all offers"
     ON offers FOR ALL
     USING (is_admin(auth_user_id()));
 
 -- Offer assignments policies
+DROP POLICY IF EXISTS "Users can view assignments for their offers" ON offer_assignments;
 CREATE POLICY "Users can view assignments for their offers"
     ON offer_assignments FOR SELECT
     USING (
@@ -125,10 +146,12 @@ CREATE POLICY "Users can view assignments for their offers"
         )
     );
 
+DROP POLICY IF EXISTS "Professionals can view their own assignments" ON offer_assignments;
 CREATE POLICY "Professionals can view their own assignments"
     ON offer_assignments FOR SELECT
     USING (professional_user_id = auth_user_id());
 
+DROP POLICY IF EXISTS "Admins can view all assignments" ON offer_assignments;
 CREATE POLICY "Admins can view all assignments"
     ON offer_assignments FOR SELECT
     USING (is_admin(auth_user_id()));

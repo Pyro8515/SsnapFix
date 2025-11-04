@@ -129,15 +129,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply updated_at triggers
+-- Apply updated_at triggers (idempotent)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_professional_profiles_updated_at ON professional_profiles;
 CREATE TRIGGER update_professional_profiles_updated_at BEFORE UPDATE ON professional_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pro_documents_updated_at ON pro_documents;
 CREATE TRIGGER update_pro_documents_updated_at BEFORE UPDATE ON pro_documents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_offers_updated_at ON offers;
 CREATE TRIGGER update_offers_updated_at BEFORE UPDATE ON offers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

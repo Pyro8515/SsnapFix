@@ -34,9 +34,28 @@ Deno.serve(async (req) => {
 
     const body = await req.text()
 
-    // Verify webhook signature (simplified - in production use stripe.webhooks.constructEvent)
-    // For now, we'll log and process
-    const event = JSON.parse(body)
+    // Verify webhook signature format (basic validation)
+    // Note: Full signature verification requires the Stripe library
+    // For production, use: https://github.com/stripe/stripe-node or similar
+    // The signature format is: t=TIMESTAMP,v1=SIGNATURE,v0=LEGACY_SIGNATURE
+    const signatureHeader = signature
+    if (!signatureHeader || !signatureHeader.includes('v1=')) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid signature format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Parse event for idempotency check
+    let event: any
+    try {
+      event = JSON.parse(body)
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Check idempotency
     const { data: existing } = await serviceClient
