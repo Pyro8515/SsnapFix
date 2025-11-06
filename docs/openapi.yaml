@@ -372,6 +372,270 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/avatar/upload:
+    post:
+      summary: Upload avatar (temp path)
+      description: Creates a presigned URL for uploading avatar to temp path. After upload, call /api/avatar/approve to move to public path.
+      operationId: uploadAvatar
+      tags:
+        - Avatars
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - file_name
+              properties:
+                file_name:
+                  type: string
+                  description: Name of the avatar file
+                auto_approve:
+                  type: boolean
+                  default: false
+                  description: Whether to auto-approve after upload
+      responses:
+        '200':
+          description: Presigned URL generated for temp path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Bad request (missing file_name)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/avatar/approve:
+    post:
+      summary: Approve avatar and move to public path
+      description: Moves avatar from temp path to public path and updates user avatar_url
+      operationId: approveAvatar
+      tags:
+        - Avatars
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - temp_path
+                - final_path
+              properties:
+                temp_path:
+                  type: string
+                  description: Temporary path where avatar was uploaded
+                final_path:
+                  type: string
+                  description: Final public path for avatar
+      responses:
+        '200':
+          description: Avatar approved and moved to public path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarApproveResponse'
+        '400':
+          description: Bad request (missing paths)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid path (not owned by user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Temp file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/jobs:
+    post:
+      summary: Create a new job
+      description: Creates a new job request with location, pricing, and service details
+      operationId: createJob
+      tags:
+        - Jobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCreateRequest'
+      responses:
+        '200':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/jobs/{jobId}/status:
+    post:
+      summary: Update job status
+      description: Updates job status (en_route, arrived, started, completed, cancelled)
+      operationId: updateJobStatus
+      tags:
+        - Jobs
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobStatusUpdateRequest'
+      responses:
+        '200':
+          description: Job status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/jobs/match:
+    post:
+      summary: Trigger job matching engine
+      description: Manually triggers the matching engine to find eligible pros for a job
+      operationId: matchJob
+      tags:
+        - Jobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                job_id:
+                  type: string
+                  format: uuid
+                  description: Job ID to match
+      responses:
+        '200':
+          description: Matching completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/ratings:
+    get:
+      summary: Get user ratings
+      description: Get all ratings submitted by the current user
+      operationId: getRatings
+      tags:
+        - Ratings
+      responses:
+        '200':
+          description: List of ratings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RatingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ratings/{jobId}:
+    get:
+      summary: Get rating for a job
+      description: Get rating for a specific job
+      operationId: getRating
+      tags:
+        - Ratings
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rating for the job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Create or update rating
+      description: Submit a rating for a completed job
+      operationId: createRating
+      tags:
+        - Ratings
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingCreateRequest'
+      responses:
+        '200':
+          description: Rating created/updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -502,6 +766,10 @@ components:
         path:
           type: string
           description: Storage path where file will be uploaded
+        token:
+          type: string
+          description: Upload token for authentication (if required)
+          nullable: true
         fields:
           type: object
           description: Additional fields for upload (S3-style, empty for Supabase)
@@ -577,6 +845,43 @@ components:
           type: string
           description: Status message
 
+    AvatarUploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Presigned URL for uploading avatar to temp path
+        path:
+          type: string
+          description: Temp path where avatar will be uploaded
+        temp_path:
+          type: string
+          description: Temporary path (avatars-temp/{user_id}/{uuid}.{ext})
+        final_path:
+          type: string
+          description: Final public path (pro-avatars/{user_id}/{uuid}.{ext})
+        token:
+          type: string
+          description: Upload token for authentication
+          nullable: true
+        auto_approve:
+          type: boolean
+          description: Whether auto-approve is enabled
+
+    AvatarApproveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether avatar was approved successfully
+        avatar_url:
+          type: string
+          format: uri
+          description: Public URL of the approved avatar
+        message:
+          type: string
+          description: Success message
+
     StripeWebhookEvent:
       type: object
       description: Stripe webhook event payload structure
@@ -593,6 +898,7 @@ components:
             - identity.verification_session.processing
             - identity.verification_session.canceled
             - account.updated
+            - account.application.authorized
             - account.application.deauthorized
         data:
           type: object
@@ -627,6 +933,180 @@ components:
           description: Additional error details
           nullable: true
           additionalProperties: true
+
+    JobCreateRequest:
+      type: object
+      required:
+        - service_code
+        - address
+      properties:
+        service_code:
+          type: string
+          description: Service code (e.g., 'plumbing', 'electrical')
+        address:
+          type: object
+          required:
+            - lat
+            - lng
+          properties:
+            line1:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zip:
+              type: string
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+        scheduled_start:
+          type: string
+          format: date-time
+          nullable: true
+        scheduled_end:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    JobResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_code:
+          type: string
+        status:
+          type: string
+          enum: [requested, assigned, en_route, arrived, started, completed, cancelled]
+        address:
+          type: object
+        price_cents:
+          type: integer
+        platform_fee_cents:
+          type: integer
+        payout_cents:
+          type: integer
+        currency:
+          type: string
+          default: USD
+        scheduled_start:
+          type: string
+          format: date-time
+          nullable: true
+        scheduled_end:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    JobStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [en_route, arrived, started, completed, cancelled]
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+
+    JobStatusResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        payment_status:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    MatchResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        matched_count:
+          type: integer
+        offers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              pro_user_id:
+                type: string
+                format: uuid
+              status:
+                type: string
+              expires_at:
+                type: string
+                format: date-time
+              payout_cents:
+                type: integer
+
+    RatingCreateRequest:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating from 1 to 5
+        comment:
+          type: string
+          nullable: true
+
+    RatingResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        pro_user_id:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
   responses:
     Unauthorized:

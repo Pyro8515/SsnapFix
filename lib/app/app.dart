@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../shared/state/account_controller.dart';
+import '../shared/theme/app_theme.dart';
 import 'router/app_router.dart';
 
 class GetDoneApp extends ConsumerWidget {
@@ -9,15 +11,17 @@ class GetDoneApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final accountState = ref.watch(accountControllerProvider);
+    
+    // Determine theme based on active role
+    final isPro = accountState.profile?.activeRole == AccountRole.professional;
+    final theme = isPro ? ProfessionalTheme.theme : CustomerTheme.theme;
 
     return MaterialApp.router(
       title: 'GetDone',
       routerConfig: router,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0066FF)),
-        useMaterial3: true,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+      theme: theme,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

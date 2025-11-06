@@ -48,7 +48,40 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Verify file exists in storage before creating document record
+    // Extract path from file_url (format: https://.../storage/v1/object/public/pro-docs/path or signed URL)
+    // Or use path directly if provided
+    let filePath = file_url
+    
+    // If file_url is a full URL, extract the path
+    if (file_url.includes('/pro-docs/')) {
+      filePath = file_url.split('/pro-docs/')[1]
+    } else if (file_url.startsWith('pro-docs/')) {
+      filePath = file_url.replace('pro-docs/', '')
+    }
+
+    // Verify file exists in storage
+    if (filePath && !filePath.startsWith('http')) {
+      const pathParts = filePath.split('/')
+      const dirPath = pathParts.slice(0, -1).join('/')
+      const fileName = pathParts[pathParts.length - 1]
+      
+      const { data: fileData, error: fileError } = await serviceClient.storage
+        .from('pro-docs')
+        .list(dirPath, {
+          search: fileName
+        })
+
+      if (fileError || !fileData || fileData.length === 0) {
+        // If file not found, we'll still allow submission but log a warning
+        // The file might be uploaded via presigned URL and not yet visible
+        // In production, you might want to be stricter here
+        console.warn(`File not found in storage: ${filePath}`)
+      }
+    }
+
     // Upsert document (using unique constraint to handle conflicts)
+    // The audit trigger will automatically create an audit record
     const { data: document, error: docError } = await serviceClient
       .from('pro_documents')
       .upsert({
@@ -60,7 +93,7 @@ Deno.serve(async (req) => {
         issuer: issuer || null,
         issued_at: issued_at || null,
         expires_at: expires_at || null,
-        status: 'pending'
+        status: 'pending' // Status set to pending for admin review
       }, {
         onConflict: 'user_id,doc_type,COALESCE(doc_subtype,\'\')'
       })
@@ -74,13 +107,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Recompute compliance
+    // Audit log is automatically created by trigger (audit_pro_document_change)
+    // Recompute compliance after document submission
     await serviceClient.rpc('recompute_pro_trade_compliance', {
       target_user_id: appUser.id
     })
-
-    // Write audit log (could be enhanced)
-    // For now, we'll just return success
 
     return new Response(
       JSON.stringify({

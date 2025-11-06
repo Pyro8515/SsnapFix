@@ -59,9 +59,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // If user is a professional, filter by trade compliance
+    // Start with all offers
     let eligibleOffers = offers || []
-    
+
+    // If user is a professional, filter by trade compliance
     if (appUser.account_type === 'professional' && appUser.active_role === 'professional') {
       // Get user's compliant trades
       const { data: compliance } = await supabase
@@ -77,17 +78,30 @@ Deno.serve(async (req) => {
         const offerTrades = offer.trade || []
         return offerTrades.some(t => compliantTrades.includes(t))
       }) || []
+    }
 
-      // Apply distance filter if coordinates provided
-      if (lat && lng && offer.location_lat && offer.location_lng) {
+    // Apply distance filter if coordinates provided (for all users)
+    if (lat && lng) {
+      const userLat = parseFloat(lat)
+      const userLng = parseFloat(lng)
+      const maxDist = parseFloat(maxDistance)
+
+      if (!isNaN(userLat) && !isNaN(userLng) && !isNaN(maxDist)) {
         eligibleOffers = eligibleOffers.filter(offer => {
-          const distance = calculateDistance(
-            parseFloat(lat),
-            parseFloat(lng),
-            parseFloat(offer.location_lat),
-            parseFloat(offer.location_lng)
-          )
-          return distance <= parseFloat(maxDistance)
+          // Only check distance if offer has location
+          if (!offer.location_lat || !offer.location_lng) {
+            return true // Include offers without location
+          }
+
+          const offerLat = parseFloat(offer.location_lat)
+          const offerLng = parseFloat(offer.location_lng)
+
+          if (isNaN(offerLat) || isNaN(offerLng)) {
+            return true // Include offers with invalid location
+          }
+
+          const distance = calculateDistance(userLat, userLng, offerLat, offerLng)
+          return distance <= maxDist
         })
       }
     }

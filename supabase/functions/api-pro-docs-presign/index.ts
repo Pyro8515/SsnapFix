@@ -48,35 +48,37 @@ Deno.serve(async (req) => {
     }
 
     // Generate unique file path
+    // Path structure: pro-docs/{user_id}/{doc_type}/{doc_subtype|default}/{uuid}.{ext}
+    // This matches RLS policy: (storage.foldername(name))[1] = auth.uid()::text
     const fileId = crypto.randomUUID()
-    const fileExtension = file_name.split('.').pop()
+    const fileExtension = file_name.split('.').pop() || 'bin'
     const path = `pro-docs/${appUser.id}/${doc_type}/${doc_subtype || 'default'}/${fileId}.${fileExtension}`
 
-    // Create presigned URL for upload (Supabase Storage)
-    // Note: Supabase Storage uses signed URLs differently than S3
-    // For uploads, we use createSignedUploadUrl or createSignedUrl
+    // Create presigned upload URL for Supabase Storage
+    // Supabase Storage uses createSignedUploadUrl for uploads (different from download URLs)
     const { data: signedData, error: signError } = await serviceClient.storage
       .from('pro-docs')
-      .createSignedUrl(path, 3600) // 1 hour expiry
+      .createSignedUploadUrl(path, {
+        upsert: false // Don't overwrite existing files
+      })
 
     if (signError) {
-      // Try alternative: createSignedUploadUrl if available
-      // Or use service role to generate upload URL
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to create signed URL', 
-          details: signError.message,
-          path: path // Return path for direct upload if needed
+          error: 'Failed to create signed upload URL', 
+          details: signError.message
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Return presigned URL and path
+    // signedData contains: { signedUrl: string, path: string, token: string }
     return new Response(
       JSON.stringify({
-        url: signedData?.signedUrl || path,
-        path: path,
+        url: signedData.signedUrl,
+        path: signedData.path || path,
+        token: signedData.token, // Upload token for client
         fields: {} // S3-style fields not needed for Supabase Storage
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

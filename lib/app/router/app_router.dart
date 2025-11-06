@@ -9,11 +9,17 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/magic_link_page.dart';
 import '../../features/customer/presentation/booking_page.dart';
 import '../../features/customer/presentation/customer_dashboard_page.dart';
+import '../../features/customer/presentation/jobs_list_page.dart';
+import '../../features/customer/presentation/onboarding/customer_onboarding_page.dart';
+import '../../features/customer/presentation/rating_page.dart';
 import '../../features/customer/presentation/track_job_page.dart';
 import '../../features/pro/presentation/account_page.dart';
+import '../../features/pro/presentation/earnings_page.dart';
+import '../../features/pro/presentation/job_detail_page.dart';
 import '../../features/pro/presentation/jobs_page.dart';
 import '../../features/pro/presentation/map_page.dart';
 import '../../features/pro/presentation/messages_page.dart';
+import '../../features/pro/presentation/onboarding/pro_onboarding_page.dart';
 import '../../features/pro/presentation/pro_dashboard_page.dart';
 import '../../features/pro/presentation/verification/verification_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
@@ -49,6 +55,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const MagicLinkPage(),
       ),
       GoRoute(
+        path: AppRoute.customerOnboarding.path,
+        name: AppRoute.customerOnboarding.name,
+        builder: (_, __) => const CustomerOnboardingPage(),
+      ),
+      GoRoute(
         path: AppRoute.customerDashboard.path,
         name: AppRoute.customerDashboard.name,
         builder: (_, state) => const CustomerDashboardPage(),
@@ -64,6 +75,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => TrackJobPage(jobId: state.pathParameters['jobId'] ?? ''),
       ),
       GoRoute(
+        path: AppRoute.customerJobs.path,
+        name: AppRoute.customerJobs.name,
+        builder: (_, state) => CustomerJobsListPage(status: state.uri.queryParameters['status']),
+      ),
+      GoRoute(
+        path: AppRoute.customerHistory.path,
+        name: AppRoute.customerHistory.name,
+        builder: (_, __) => const CustomerJobsListPage(status: 'completed'),
+      ),
+      GoRoute(
+        path: AppRoute.customerRatings.path,
+        name: AppRoute.customerRatings.name,
+        builder: (_, state) => RatingPage(jobId: state.pathParameters['jobId'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoute.proOnboarding.path,
+        name: AppRoute.proOnboarding.name,
+        builder: (_, __) => const ProOnboardingPage(),
+      ),
+      GoRoute(
         path: AppRoute.proDashboard.path,
         name: AppRoute.proDashboard.name,
         builder: (_, __) => const ProDashboardPage(),
@@ -72,6 +103,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.proJobs.path,
         name: AppRoute.proJobs.name,
         builder: (_, __) => const ProJobsPage(),
+      ),
+      GoRoute(
+        path: AppRoute.proJobDetail.path,
+        name: AppRoute.proJobDetail.name,
+        builder: (_, state) => ProJobDetailPage(jobId: state.pathParameters['jobId'] ?? ''),
       ),
       GoRoute(
         path: AppRoute.proMap.path,
@@ -92,6 +128,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.proVerification.path,
         name: AppRoute.proVerification.name,
         builder: (_, __) => const VerificationWizardPage(),
+      ),
+      GoRoute(
+        path: AppRoute.proEarnings.path,
+        name: AppRoute.proEarnings.name,
+        builder: (_, __) => const ProEarningsPage(),
       ),
     ],
     redirect: notifier.handleRedirect,

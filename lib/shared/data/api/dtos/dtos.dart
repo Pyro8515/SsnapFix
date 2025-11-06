@@ -4,7 +4,9 @@
 
 export 'error_response.dart';
 export 'document_dto.dart';
+export 'job_dto.dart';
 export 'offer_dto.dart';
+export 'rating_dto.dart';
 export 'role_switch_dto.dart';
 export 'stripe_dto.dart';
 export 'user_response.dart';

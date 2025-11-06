@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { offer_id } = await req.json()
+    const { offer_id, lat, lng, max_distance } = await req.json()
     if (!offer_id) {
       return new Response(
         JSON.stringify({ error: 'offer_id is required' }),
@@ -70,30 +70,54 @@ Deno.serve(async (req) => {
 
     // Check compliance for all required trades
     const offerTrades = offer.trade || []
-    const { data: compliance } = await serviceClient
-      .from('pro_trade_compliance')
-      .select('trade, compliant, reason')
-      .eq('user_id', appUser.id)
-      .in('trade', offerTrades)
-
     const reasons: string[] = []
-    const nonCompliantTrades = (compliance || [])
-      .filter(c => !c.compliant)
-      .map(c => c.trade)
 
-    if (nonCompliantTrades.length > 0) {
-      reasons.push(`Not compliant for trades: ${nonCompliantTrades.join(', ')}`)
-    }
+    // Check if offer requires any trades
+    if (offerTrades.length === 0) {
+      reasons.push('Offer does not specify required trades')
+    } else {
+      // Get compliance for all required trades
+      const { data: compliance } = await serviceClient
+        .from('pro_trade_compliance')
+        .select('trade, compliant, reason')
+        .eq('user_id', appUser.id)
+        .in('trade', offerTrades)
 
-    // Check if user is missing compliance records for any required trade
-    const missingTrades = offerTrades.filter(t => !compliance?.some(c => c.trade === t))
-    if (missingTrades.length > 0) {
-      reasons.push(`Missing compliance verification for trades: ${missingTrades.join(', ')}`)
+      // Check each required trade
+      for (const trade of offerTrades) {
+        const tradeCompliance = compliance?.find(c => c.trade === trade)
+        
+        if (!tradeCompliance) {
+          reasons.push(`Missing compliance verification for trade: ${trade}`)
+        } else if (!tradeCompliance.compliant) {
+          // Include detailed reason if available
+          const reasonDetail = tradeCompliance.reason 
+            ? ` (${tradeCompliance.reason})`
+            : ''
+          reasons.push(`Not compliant for trade "${trade}"${reasonDetail}`)
+        }
+      }
     }
 
     // Check verification status
     if (appUser.verification_status !== 'approved') {
-      reasons.push(`Account verification status is ${appUser.verification_status}`)
+      reasons.push(`Account verification status is "${appUser.verification_status}" (must be "approved")`)
+    }
+
+    // Check distance if coordinates provided
+    if (lat && lng && offer.location_lat && offer.location_lng) {
+      const userLat = parseFloat(lat)
+      const userLng = parseFloat(lng)
+      const offerLat = parseFloat(offer.location_lat)
+      const offerLng = parseFloat(offer.location_lng)
+      const maxDist = max_distance ? parseFloat(max_distance) : 50 // Default 50km
+
+      if (!isNaN(userLat) && !isNaN(userLng) && !isNaN(offerLat) && !isNaN(offerLng) && !isNaN(maxDist)) {
+        const distance = calculateDistance(userLat, userLng, offerLat, offerLng)
+        if (distance > maxDist) {
+          reasons.push(`Offer location is ${distance.toFixed(1)}km away (maximum allowed: ${maxDist}km)`)
+        }
+      }
     }
 
     // If any compliance issues, return 409
@@ -142,3 +166,16 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+// Haversine formula for distance calculation
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}

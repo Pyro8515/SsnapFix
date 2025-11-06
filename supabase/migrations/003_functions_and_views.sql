@@ -185,6 +185,10 @@ BEGIN
     -- Recompute compliance for affected users
     IF affected_user_ids IS NOT NULL THEN
         PERFORM recompute_pro_trade_compliance(user_id) FROM unnest(affected_user_ids) AS user_id;
+        
+        -- Process demotion notices after compliance recomputation
+        -- This will send notifications to users whose verification_status was demoted
+        PERFORM process_document_expiry_demotions();
     END IF;
 
     RETURN QUERY

@@ -86,13 +86,23 @@ Configure Stripe webhooks to point to your Edge Functions:
 - **Identity webhook**: `https://<project-ref>.supabase.co/functions/v1/api-stripe-identity-webhook`
 - **Payments webhook**: `https://<project-ref>.supabase.co/functions/v1/api-stripe-payments-webhook`
 
-Listen for events:
+**Identity webhook events**:
 - `identity.verification_session.verified`
 - `identity.verification_session.requires_input`
 - `identity.verification_session.processing`
 - `identity.verification_session.canceled`
-- `account.updated`
-- `account.application.deauthorized`
+
+**Payments webhook events**:
+- `account.updated` - Account status changes
+- `account.application.authorized` - Account authorized
+- `account.application.deauthorized` - Account disconnected
+
+**Webhook Setup**:
+1. Go to Stripe Dashboard → Webhooks
+2. Add endpoint URLs (above)
+3. Select events to listen for
+4. Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET` environment variable
+5. Webhook signature verification is implemented (timestamp + HMAC format validation)
 
 ### 6. Cron Jobs (Optional)
 

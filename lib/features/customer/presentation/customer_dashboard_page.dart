@@ -82,7 +82,9 @@ class CustomerDashboardPage extends ConsumerWidget {
                 title: 'Active & upcoming jobs',
                 subtitle: 'Track progress and arrival times.',
                 icon: Icons.map,
-                onPressed: () {},
+                onPressed: () {
+                  context.push(AppRoute.customerJobs.path);
+                },
                 actionLabel: 'See timeline',
               ),
               const SizedBox(height: 16),
@@ -98,7 +100,9 @@ class CustomerDashboardPage extends ConsumerWidget {
                 title: 'Recent activity',
                 subtitle: 'Keep track of bookings, payments, and updates.',
                 icon: Icons.receipt_long,
-                onPressed: () {},
+                onPressed: () {
+                  context.push(AppRoute.customerHistory.path);
+                },
                 actionLabel: 'View history',
               ),
             ],
